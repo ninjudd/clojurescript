@@ -533,7 +533,11 @@
     (if (nil? x)
       (nil? y)
       (or (identical? x y)
-        ^boolean (-equiv x y))))
+          (and (instance? js/Date x)
+               (instance? js/Date y)
+               (= (.getTime x) (.getTime y))
+               (= (.getTimezoneOffset x) (.getTimezoneOffset y)))
+          ^boolean (-equiv x y))))
   ([x y & more]
      (if (= x y)
        (if (next more)
@@ -547,16 +551,6 @@
 (extend-type nil
   ICounted
   (-count [_] 0))
-
-;; TODO: we should remove this and handle date equality checking
-;; by some other means, probably by adding a new primitive type
-;; case to the hash table lookup - David
-
-(extend-type js/Date
-  IEquiv
-  (-equiv [o other]
-    (and (instance? js/Date other)
-         (identical? (.toString o) (.toString other)))))
 
 (extend-type number
   IEquiv
@@ -1122,6 +1116,9 @@ reduces them without incurring seq initialization"
 
     (string? o)
     (check-string-hash-cache o)
+
+    (instance? js/Date o)
+    (.getTime o)
 
     (nil? o) 0
 
