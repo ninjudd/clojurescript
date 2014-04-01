@@ -533,10 +533,6 @@
     (if (nil? x)
       (nil? y)
       (or (identical? x y)
-          (and (instance? js/Date x)
-               (instance? js/Date y)
-               (= (.getTime x) (.getTime y))
-               (= (.getTimezoneOffset x) (.getTimezoneOffset y)))
           ^boolean (-equiv x y))))
   ([x y & more]
      (if (= x y)
@@ -768,7 +764,7 @@ reduces them without incurring seq initialization"
     (if (pos? i)
       (RSeq. ci (dec i) nil)
       ()))
-  
+
   INext
   (-next [coll]
     (when (pos? i)
@@ -826,7 +822,13 @@ reduces them without incurring seq initialization"
 
 (extend-type default
   IEquiv
-  (-equiv [x o] (identical? x o)))
+  (-equiv [x o]
+    (cond (instance? js/Date x)
+          (and (instance? js/Date y)
+               (= (.getTime x) (.getTime y))
+               (= (.getTimezoneOffset x) (.getTimezoneOffset y)))
+          :else
+          (identical? x o))))
 
 (defn conj
   "conj[oin]. Returns a new collection with the xs
@@ -864,7 +866,7 @@ reduces them without incurring seq initialization"
 
       (array? coll)
       (alength coll)
-    
+
       (string? coll)
       (alength coll)
 
@@ -969,14 +971,14 @@ reduces them without incurring seq initialization"
         (array? o)
         (when (< k (.-length o))
           (aget o k))
-        
+
         (string? o)
         (when (< k (.-length o))
           (aget o k))
 
         (native-satisfies? ILookup o)
         (-lookup o k)
-        
+
         :else nil)))
   ([o k not-found]
     (if-not (nil? o)
@@ -988,7 +990,7 @@ reduces them without incurring seq initialization"
         (if (< k (.-length o))
           (aget o k)
           not-found)
-        
+
         (string? o)
         (if (< k (.-length o))
           (aget o k)
@@ -1414,7 +1416,7 @@ reduces them without incurring seq initialization"
 
        (string? coll)
        (array-reduce coll f)
-       
+
        (native-satisfies? IReduce coll)
        (-reduce coll f)
 
@@ -1427,10 +1429,10 @@ reduces them without incurring seq initialization"
 
        (array? coll)
        (array-reduce coll f val)
-      
+
        (string? coll)
        (array-reduce coll f val)
-       
+
        (native-satisfies? IReduce coll)
        (-reduce coll f val)
 
@@ -2065,7 +2067,7 @@ reduces them without incurring seq initialization"
 
   ISeqable
   (-seq [coll] coll)
-  
+
   IReduce
   (-reduce [coll f] (seq-reduce f coll))
   (-reduce [coll f start] (seq-reduce f start coll)))
@@ -2084,7 +2086,7 @@ reduces them without incurring seq initialization"
 (deftype Keyword [ns name fqn ^:mutable _hash]
   Object
   (toString [_] (str ":" fqn))
-  
+
   IEquiv
   (-equiv [_ other]
     (if (instance? Keyword other)
@@ -2264,7 +2266,7 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
-  
+
   IWithMeta
   (-with-meta [coll m]
     (ChunkedCons. chunk more m __hash))
@@ -4230,7 +4232,7 @@ reduces them without incurring seq initialization"
   Object
   (toString [coll]
     (pr-str* coll))
-  
+
   IMeta
   (-meta [coll] _meta)
 
@@ -4258,7 +4260,7 @@ reduces them without incurring seq initialization"
 
   IHash
   (-hash [coll] (hash-coll coll))
-  
+
   ISeq
   (-first [coll]
     [(aget arr i) (aget arr (inc i))])
@@ -4396,7 +4398,7 @@ reduces them without incurring seq initialization"
 
 (set! cljs.core.PersistentArrayMap.fromArray
   (fn [arr ^boolean no-clone ^boolean no-check]
-    (let [arr (if no-clone arr (aclone arr))] 
+    (let [arr (if no-clone arr (aclone arr))]
       (if no-check
         (let [cnt (/ (alength arr) 2)]
           (PersistentArrayMap. nil cnt arr nil))
@@ -6037,7 +6039,7 @@ reduces them without incurring seq initialization"
 
   IHash
   (-hash [coll] (hash-coll coll))
-  
+
   ISeq
   (-first [coll]
     (let [^not-native me (-first mseq)]
@@ -6839,11 +6841,11 @@ reduces them without incurring seq initialization"
               ;; handle CLJS ctors
               ^boolean (.-cljs$lang$type obj)
               (.cljs$lang$ctorPrWriter obj obj writer opts)
-              
+
               ; Use the new, more efficient, IPrintWithWriter interface when possible.
               (implements? IPrintWithWriter obj)
               (-pr-writer ^not-native obj writer opts)
-              
+
               (or (identical? (type obj) js/Boolean) (number? obj))
               (-write writer (str obj))
 
@@ -7084,7 +7086,7 @@ reduces them without incurring seq initialization"
 
   Subvec
   (-compare [x y] (compare-indexed x y))
-  
+
   PersistentVector
   (-compare [x y] (compare-indexed x y)))
 
@@ -7100,7 +7102,7 @@ reduces them without incurring seq initialization"
 
 (deftype Atom [state meta validator watches]
   IAtom
-  
+
   IEquiv
   (-equiv [o other] (identical? o other))
 
@@ -7371,7 +7373,7 @@ Maps become Objects. Arbitrary keys are encoded to by key->js."
 
                   (array? x)
                   (vec (map thisfn x))
-                   
+
                   (identical? (type x) js/Object)
                   (into {} (for [k (js-keys x)]
                              [(keyfn k) (thisfn (aget x k))]))
